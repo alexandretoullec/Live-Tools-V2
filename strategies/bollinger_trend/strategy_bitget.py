@@ -1,9 +1,9 @@
 import sys
 sys.path.append("./live_tools")  # Add the directory containing the custom modules to the system path
-import ccxt  # Library for cryptocurrency trading with many exchanges
+# import ccxt  # Library for cryptocurrency trading with many exchanges
 import ta  # Technical Analysis library to compute indicators
 import pandas as pd  # Data manipulation library
-from utilities.perp_bitget import PerpBitget  # Custom module for interacting with Bitget
+from utilities.bitget_perp import PerpBitget
 from utilities.custom_indicators import get_n_columns  # Custom function to manipulate DataFrames
 from datetime import datetime  # Library to handle date and time
 import time  # Library for time-related functions
