@@ -6,17 +6,15 @@ import time
 import itertools
 from pydantic import BaseModel
 
-
+# Définition des modèles de données avec Pydantic
 class UsdtBalance(BaseModel):
     total: float
     free: float
     used: float
 
-
 class Info(BaseModel):
     success: bool
     message: str
-
 
 class Order(BaseModel):
     id: str
@@ -30,7 +28,6 @@ class Order(BaseModel):
     remaining: float
     timestamp: int
 
-
 class TriggerOrder(BaseModel):
     id: str
     pair: str
@@ -41,7 +38,6 @@ class TriggerOrder(BaseModel):
     size: float
     reduce: bool
     timestamp: int
-
 
 class Position(BaseModel):
     pair: str
@@ -59,7 +55,7 @@ class Position(BaseModel):
     take_profit_price: float
     stop_loss_price: float
 
-
+# Classe pour l'interface avec l'API Bitget
 class PerpBitget:
     def __init__(self, public_api=None, secret_api=None, password=None):
         bitget_auth_object = {
@@ -79,18 +75,22 @@ class PerpBitget:
             self._auth = True
             self._session = ccxt.bitget(bitget_auth_object)
 
+    # Charger les marchés disponibles
     async def load_markets(self):
         self.market = await self._session.load_markets()
 
+    # Fermer la session
     async def close(self):
         await self._session.close()
 
+    # Convertir les paires d'échange
     def ext_pair_to_pair(self, ext_pair) -> str:
         return f"{ext_pair}:USDT"
 
     def pair_to_ext_pair(self, pair) -> str:
         return pair.replace(":USDT", "")
     
+    # Obtenir les informations sur une paire
     def get_pair_info(self, ext_pair) -> str:
         pair = self.ext_pair_to_pair(ext_pair)
         if pair in self.market:
@@ -98,6 +98,7 @@ class PerpBitget:
         else: 
             return None
 
+    # Ajuster la précision de la quantité et du prix
     def amount_to_precision(self, pair: str, amount: float) -> float:
         pair = self.ext_pair_to_pair(pair)
         try:
@@ -109,6 +110,7 @@ class PerpBitget:
         pair = self.ext_pair_to_pair(pair)
         return self._session.price_to_precision(pair, price)
 
+    # Obtenir les données OHLCV pour une paire donnée
     async def get_last_ohlcv(self, pair, timeframe, limit=1000) -> pd.DataFrame:
         pair = self.ext_pair_to_pair(pair)
         bitget_limit = 200
@@ -150,6 +152,7 @@ class PerpBitget:
         del df["date"]
         return df
 
+    # Obtenir le solde USDT
     async def get_balance(self) -> UsdtBalance:
         resp = await self._session.fetch_balance()
         return UsdtBalance(
@@ -158,6 +161,7 @@ class PerpBitget:
             used=resp["USDT"]["used"],
         )
 
+    # Définir le mode de marge et le levier
     async def set_margin_mode_and_leverage(self, pair, margin_mode, leverage):
         if margin_mode not in ["crossed", "isolated"]:
             raise Exception("Margin mode must be either 'crossed' or 'isolated'")
@@ -210,6 +214,7 @@ class PerpBitget:
             message=f"Margin mode and leverage set to {margin_mode} and {leverage}x",
         )
 
+    # Obtenir les positions ouvertes
     async def get_open_positions(self, pairs) -> List[Position]:
         pairs = [self.ext_pair_to_pair(pair) for pair in pairs]
         resp = await self._session.fetch_positions(
@@ -251,6 +256,7 @@ class PerpBitget:
             )
         return return_positions
 
+    # Placer une commande
     async def place_order(
         self,
         pair,
@@ -289,6 +295,7 @@ class PerpBitget:
             else:
                 return None
 
+    # Placer un ordre à déclenchement
     async def place_trigger_order(
         self,
         pair,
@@ -327,6 +334,7 @@ class PerpBitget:
             else:
                 return None
 
+    # Obtenir les ordres ouverts
     async def get_open_orders(self, pair) -> List[Order]:
         pair = self.ext_pair_to_pair(pair)
         resp = await self._session.fetch_open_orders(pair)
@@ -348,10 +356,10 @@ class PerpBitget:
             )
         return return_orders
 
+    # Obtenir les ordres à déclenchement ouverts
     async def get_open_trigger_orders(self, pair) -> List[TriggerOrder]:
         pair = self.ext_pair_to_pair(pair)
         resp = await self._session.fetch_open_orders(pair, params={"stop": True})
-        # print(resp)
         return_orders = []
         for order in resp:
             reduce = True if order["info"]["tradeSide"] == "close" else False
@@ -371,6 +379,7 @@ class PerpBitget:
             )
         return return_orders
 
+    # Obtenir un ordre par son ID
     async def get_order_by_id(self, order_id, pair) -> Order:
         pair = self.ext_pair_to_pair(pair)
         resp = await self._session.fetch_order(order_id, pair)
@@ -387,6 +396,7 @@ class PerpBitget:
             timestamp=resp["timestamp"],
         )
 
+    # Annuler des ordres
     async def cancel_orders(self, pair, ids=[]):
         try:
             pair = self.ext_pair_to_pair(pair)
@@ -398,6 +408,7 @@ class PerpBitget:
         except Exception as e:
             return Info(success=False, message="Error or no orders to cancel")
 
+    # Annuler des ordres à déclenchement
     async def cancel_trigger_orders(self, pair, ids=[]):
         try:
             pair = self.ext_pair_to_pair(pair)
